@@ -17,6 +17,7 @@ struct PostData {
     count_date: String,
     positive_percent: String,
     positive_percent_date: String,
+    source_text: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -121,12 +122,9 @@ async fn get_post_data(client: &Client, post: &PostInfo) -> anyhow::Result<Optio
     let paragraphs = document.select(&paragraphs_selector);
 
     for p in paragraphs {
-        let p_text = p
-            .text()
-            .collect::<String>()
-            .replace("\n", "")
-            .replace("\r", "")
-            .replace(" ", "");
+        let p_text = p.text().collect::<String>();
+        let p_text = regex::Regex::new(r"\s+").unwrap().replace_all(&p_text, "");
+
         let flag = "检测阳性率";
         let index_of_flag = p_text.find(flag);
         if let Some(index) = index_of_flag {
@@ -157,6 +155,7 @@ async fn get_post_data(client: &Client, post: &PostInfo) -> anyhow::Result<Optio
                 count_date,
                 positive_percent,
                 positive_percent_date,
+                source_text: p_text.into(),
             };
             return Ok(Some(post_data));
         }
