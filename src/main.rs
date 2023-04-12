@@ -96,15 +96,18 @@ async fn main() -> anyhow::Result<()> {
         post_list.push(post_info);
     }
 
-    let mut stats = Vec::new();
+    let mut stats: Vec<Data> = std::fs::read("stats-rust.json")
+        .ok()
+        .and_then(|s| String::from_utf8(s).ok())
+        .and_then(|data| serde_json::from_str(&data).ok())
+        .unwrap_or_default();
     for post in post_list {
         println!("==> getting post {} ...", post.link);
-        let post_data = get_post_data(&client, &post).await?;
-        let data = Data {
-            data: post_data,
-            post,
-        };
-        stats.push(data);
+        let data = get_post_data(&client, &post).await?;
+        match stats.iter_mut().find(|d| &d.post.date == &post.date) {
+            Some(item) => *item = Data { data, post },
+            None => stats.push(Data { data, post }),
+        }
     }
 
     let json = serde_json::to_string_pretty(&stats)?;
